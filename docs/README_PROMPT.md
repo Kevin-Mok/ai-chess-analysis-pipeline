@@ -10,9 +10,9 @@ Goal:
 - Keep the tone practical and confident (not cheesy).
 
 Repository files to use:
-- 2.27-fast-checkmate.pgn
-- 3.3-95%->50%.pgn
-- lichess_study_comebacks_gaju33333-1101-solopistol-1027_by_SoloPistol_2026.03.03.gif
+- games/2026-02-27-fast-checkmate.pgn
+- games/2026-03-03-comeback-vs-gaju33333.pgn
+- media/2026-03-03-lichess-comeback.gif
 
 Requirements:
 1. Output valid Markdown only.

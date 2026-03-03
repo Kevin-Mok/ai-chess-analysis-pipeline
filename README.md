@@ -22,11 +22,11 @@ Two rapid games that show tactical conversion and comeback play: a 15-move check
 - [Lichess study chapter](https://lichess.org/study/9tKdUwCn/7y3AQeFe)
 
 ## How to View the Games
-Open either PGN in Chess.com or Lichess analysis boards, or import into any PGN viewer.
+Open either PGN from `games/2026-02-27-fast-checkmate.pgn` or `games/2026-03-03-comeback-vs-gaju33333.pgn` in Chess.com or Lichess analysis boards, or import into any PGN viewer.
 
 Visual highlight:
 
-![Lichess comeback highlight](lichess_study_comebacks_gaju33333-1101-solopistol-1027_by_SoloPistol_2026.03.03.gif)
+![Lichess comeback highlight](media/2026-03-03-lichess-comeback.gif)
 
 ## Next goals
 - Reduce early opening inaccuracies in Sicilian structures.
