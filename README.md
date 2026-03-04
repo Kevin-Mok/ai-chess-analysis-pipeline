@@ -26,6 +26,7 @@ AI-first engineering focus: this project is a local multi-engine + LLM analysis 
 - Current analysis artifacts:
   - [2026-03-03-comeback-vs-gaju33333 analysis](analysis/2026-03-03-comeback-vs-gaju33333.md)
   - [2026-02-27-fast-checkmate analysis](analysis/2026-02-27-fast-checkmate.md)
+  - [3.4-play-well analysis](analysis/3.4-play-well.md)
 
 ### Engineering Signals
 - End-to-end automation:
@@ -36,12 +37,16 @@ AI-first engineering focus: this project is a local multi-engine + LLM analysis 
 - Tooling depth:
   - Integrates multiple local binaries (Stockfish, Lc0, llama-cli) with path auto-detection and explicit override flags.
 - Failure handling:
-  - Forensic failures are surfaced in output and gracefully fall back to heuristic cause text.
+  - Forensic mode now uses Lc0-ready retries and MultiPV-aware timeout budgeting to reduce transient engine timeouts.
+  - If forensic still fails, errors are surfaced in output and the report falls back to heuristic cause text.
 
 ### What The Main Script Produces
 - Move-by-move WDL/eval table from POV (`SoloPistol` by default, override with `--pov-player`).
 - `## Significant Swings` section with:
+  - chronological ordering (first move to last move),
   - event severity,
+  - W/L/D before/after transition per swing,
+  - eval before/after,
   - expected-score before/after,
   - engine disagreement/cost evidence,
   - concise coaching lesson.
@@ -67,6 +72,7 @@ This project is intentionally local-first: engine and LLM tooling run on-device 
 - `forensic` (default):
   - Deterministic Stockfish + Lc0 evidence path.
   - Produces best-move deltas, PV evidence, confidence labels, and coaching lessons.
+  - Uses Lc0-ready retries and MultiPV-aware timeout budgets for more stable `--forensic-multipv` runs.
 - `forensic-llm`:
   - Same forensic evidence plus optional local LLM rewriting.
   - Falls back to deterministic forensic text if LLM binary/model are missing.
@@ -109,7 +115,7 @@ python3 analyze_pgn.py games/2026-03-03-comeback-vs-gaju33333.pgn \
 - Swing extraction:
   - `--swing-threshold-score` (default `0.20`)
   - `--swing-max-events` (default `8`)
-  - `--swing-scope both|pov|opponent` (default `both`)
+  - `--swing-scope both|pov|opponent` (default `pov`)
 - Forensic evidence:
   - `--cause-mode heuristic|forensic|forensic-llm` (default `forensic`)
   - `--lc0-path`, `--lc0-weights`

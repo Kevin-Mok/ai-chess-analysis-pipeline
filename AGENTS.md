@@ -238,6 +238,10 @@ Executing...
 
 This keeps you on track without heavyweight ceremony.
 
+### 4.7 Push After Commit
+
+- After every successful local commit, immediately push that commit to the remote tracking branch unless the user explicitly says not to push.
+
 ---
 
 ## 5) Code Principles

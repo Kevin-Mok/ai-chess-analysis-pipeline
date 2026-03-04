@@ -29,7 +29,7 @@ PCT_COL_WIDTH = 5
 DEFAULT_ANALYSIS_DIR = "analysis"
 DEFAULT_SWING_THRESHOLD_SCORE = 0.20
 DEFAULT_SWING_MAX_EVENTS = 8
-DEFAULT_SWING_SCOPE = "both"
+DEFAULT_SWING_SCOPE = "pov"
 DEFAULT_CAUSE_MODE = "forensic"
 DEFAULT_FORENSIC_TIME_MS = 700
 DEFAULT_FORENSIC_MULTIPV = 3
@@ -85,6 +85,10 @@ def format_row(ply_label, turn, san, win, loss, draw, eval_str):
         f"{fmt_pct(draw)} "
         f"{eval_str:>{EVAL_COL_WIDTH}}"
     )
+
+
+def format_wld(win, loss, draw):
+    return f"{win:.1f}/{loss:.1f}/{draw:.1f}"
 
 
 def parse_info_line(line):
@@ -156,6 +160,9 @@ class UCIEngine:
         extra_options=None,
     ):
         self.name = name
+        lowered_name = (name or "").lower()
+        self._is_lc0 = "lc0" in lowered_name or "leela" in lowered_name
+        self._current_multipv = None
         self.proc = subprocess.Popen(
             [engine_path],
             stdin=subprocess.PIPE,
@@ -211,6 +218,46 @@ class UCIEngine:
     def _set_option(self, name, value):
         self._send(f"setoption name {name} value {value}")
 
+    def _ready_timeout_s(self, requested_multipv=1, hard_timeout_ms=None, during_init=False):
+        timeout_s = 6.0
+        if hard_timeout_ms is not None:
+            timeout_s = max(timeout_s, (hard_timeout_ms / 1000.0) + 1.0)
+        if during_init:
+            timeout_s = max(timeout_s, 12.0)
+        if self._is_lc0:
+            # Lc0 can take longer to acknowledge option changes, especially at higher MultiPV.
+            lc0_floor = 12.0 if requested_multipv <= 1 else 16.0 + max(0, requested_multipv - 2) * 2.0
+            if during_init:
+                lc0_floor = max(lc0_floor, 18.0)
+            timeout_s = max(timeout_s, lc0_floor)
+        return timeout_s
+
+    def _sync_ready(self, timeout_s, retries=0):
+        timeout_s = max(1.0, float(timeout_s))
+        attempts = max(0, int(retries)) + 1
+        for attempt in range(1, attempts + 1):
+            self._send("isready")
+            try:
+                self._wait_for("readyok", timeout_s)
+                return
+            except TimeoutError:
+                if attempt >= attempts:
+                    raise
+                timeout_s += max(4.0, timeout_s * 0.5)
+                log(
+                    f"{self.name}: isready retry {attempt}/{attempts - 1} "
+                    f"after ready timeout; new timeout={timeout_s:.1f}s"
+                )
+
+    def _effective_hard_timeout_ms(self, movetime_ms, hard_timeout_ms, requested_multipv=1):
+        timeout_ms = max(1000, int(hard_timeout_ms))
+        if self._is_lc0:
+            requested_multipv = max(1, int(requested_multipv))
+            # Give neural MultiPV searches extra time to emit bestmove.
+            lc0_floor_ms = int(movetime_ms) * (requested_multipv + 4) + 2500
+            timeout_ms = max(timeout_ms, lc0_floor_ms)
+        return timeout_ms
+
     def _init_uci(self):
         self._send("uci")
         self._wait_for("uciok", 8.0)
@@ -222,8 +269,8 @@ class UCIEngine:
             self._set_option("UCI_ShowWDL", "true")
         for name, value in self.extra_options.items():
             self._set_option(name, value)
-        self._send("isready")
-        self._wait_for("readyok", 12.0)
+        ready_retries = 1 if self._is_lc0 else 0
+        self._sync_ready(self._ready_timeout_s(during_init=True), retries=ready_retries)
 
     def analyse_fen(self, fen, movetime_ms, hard_timeout_ms):
         details = self.analyse_fen_detailed(
@@ -249,9 +296,17 @@ class UCIEngine:
             self._send(f"position fen {fen}")
 
         requested_multipv = max(1, int(multipv))
-        self._set_option("MultiPV", requested_multipv)
-        self._send("isready")
-        self._wait_for("readyok", 6.0)
+        if self._current_multipv != requested_multipv:
+            self._set_option("MultiPV", requested_multipv)
+            ready_retries = 1 if self._is_lc0 else 0
+            self._sync_ready(
+                self._ready_timeout_s(
+                    requested_multipv=requested_multipv,
+                    hard_timeout_ms=hard_timeout_ms,
+                ),
+                retries=ready_retries,
+            )
+            self._current_multipv = requested_multipv
 
         self._send(f"go movetime {max(1, int(movetime_ms))}")
 
@@ -261,7 +316,12 @@ class UCIEngine:
         mate = None
         wdl = None
 
-        deadline = time.monotonic() + (hard_timeout_ms / 1000.0)
+        effective_hard_timeout_ms = self._effective_hard_timeout_ms(
+            movetime_ms=movetime_ms,
+            hard_timeout_ms=hard_timeout_ms,
+            requested_multipv=requested_multipv,
+        )
+        deadline = time.monotonic() + (effective_hard_timeout_ms / 1000.0)
         stop_sent = False
 
         while True:
@@ -1024,25 +1084,21 @@ def render_significant_swings(
         return
 
     selected_events = select_swing_events(swing_events, swing_max_events)
-    good_events = [event for event in selected_events if event["delta"] > 0]
-    bad_events = [event for event in selected_events if event["delta"] < 0]
-    neutral_events = [event for event in selected_events if event["delta"] == 0]
-    event_groups = [
-        ("Good (+me / -op.)", good_events),
-        ("Bad (-me / +op.)", bad_events),
-        ("Neutral", neutral_events),
-    ]
 
     def render_event(event):
         delta_points = event["delta"] * 100.0
         sign = "+" if delta_points >= 0 else ""
         me_delta = delta_points
         op_delta = -delta_points
+        before_wld = format_wld(*event["before_wld"])
+        after_wld = format_wld(*event["after_wld"])
         print(
             (
                 f"- [{event['severity']}] {event['prefix']} {event['san']} ({event['turn_label']}): "
+                f"W/L/D {before_wld} -> {after_wld}, "
+                f"eval {event['before_eval']} -> {event['after_eval']}, "
                 f"expected score {event['before_score']:.2f} -> {event['after_score']:.2f} "
-                f"({sign}{delta_points:.1f} pts), eval {event['before_eval']} -> {event['after_eval']}"
+                f"({sign}{delta_points:.1f} pts)"
             ),
             file=out,
             flush=True,
@@ -1095,17 +1151,11 @@ def render_significant_swings(
                 )
             print(f"  Cause: {event['reason']}", file=out, flush=True)
 
-    rendered_any_group = False
-    for heading, grouped_events in event_groups:
-        if not grouped_events:
-            continue
+    for index, event in enumerate(selected_events):
         print("", file=out, flush=True)
-        print(f"### {heading}", file=out, flush=True)
-        for index, event in enumerate(grouped_events):
-            render_event(event)
-            if index < len(grouped_events) - 1:
-                print("", file=out, flush=True)
-        rendered_any_group = True
+        render_event(event)
+        if index < len(selected_events) - 1:
+            print("", file=out, flush=True)
 
 
 def validate_forensic_stack(cause_mode, lc0_path, lc0_weights):
@@ -1219,7 +1269,7 @@ def main(
             )
         log("Engine mode: direct UCI subprocess.")
 
-        # Stream markdown output immediately so redirected output grows during analysis.
+        # Write metadata first; swing summary is rendered above the move table after analysis.
         print(title, file=out, flush=True)
         print("", file=out, flush=True)
         print(f"- White: `{white}`", file=out, flush=True)
@@ -1234,16 +1284,12 @@ def main(
         else:
             print("- POV: `White` (fallback)", file=out, flush=True)
             print(f"- Turn labels: `me` = `{white}`, `op.` = `{black}`", file=out, flush=True)
-        print("", file=out, flush=True)
-        header = format_row("Ply", "Turn", "Move", "Win%", "Loss%", "Draw%", "Eval")
-        print("```text", file=out, flush=True)
-        print(header, file=out, flush=True)
-        print("-" * len(header), file=out, flush=True)
 
         board = game.board()
         ply = 0
         previous_scored_ply = None
         swing_events = []
+        table_rows = []
         for move in game.mainline_moves():
             board_before = board.copy(stack=False)
             san = board.san(move)
@@ -1310,6 +1356,7 @@ def main(
                     "mover_is_pov": mover_is_pov,
                     "score": score,
                     "eval_str": eval_str,
+                    "wld": (w, l, d),
                 }
                 if previous_scored_ply is not None:
                     delta = score - previous_scored_ply["score"]
@@ -1331,6 +1378,8 @@ def main(
                                 "after_score": score,
                                 "before_eval": previous_scored_ply["eval_str"],
                                 "after_eval": eval_str,
+                                "before_wld": previous_scored_ply["wld"],
+                                "after_wld": (w, l, d),
                                 "delta": delta,
                                 "severity": swing_severity(abs_delta),
                                 "reason": infer_swing_reason(
@@ -1345,7 +1394,7 @@ def main(
                         )
                 previous_scored_ply = current_scored_ply
 
-            print(format_row(prefix, turn_label, san, w, l, d, eval_str), file=out, flush=True)
+            table_rows.append(format_row(prefix, turn_label, san, w, l, d, eval_str))
             elapsed = time.perf_counter() - start
             log(
                 f"[{ply}/{total_plies}] {prefix} {san}: eval={eval_str}, W/D/L={w}/{d}/{l}, "
@@ -1426,7 +1475,6 @@ def main(
                 phase_elapsed = time.perf_counter() - phase_start
                 log(f"Completed forensic phase in {phase_elapsed:.1f}s.")
 
-        print("```", file=out, flush=True)
         render_significant_swings(
             out,
             swing_events,
@@ -1435,6 +1483,14 @@ def main(
             swing_max_events=swing_max_events,
             cause_mode=cause_mode,
         )
+        print("", file=out, flush=True)
+        header = format_row("Ply", "Turn", "Move", "Win%", "Loss%", "Draw%", "Eval")
+        print("```text", file=out, flush=True)
+        print(header, file=out, flush=True)
+        print("-" * len(header), file=out, flush=True)
+        for row in table_rows:
+            print(row, file=out, flush=True)
+        print("```", file=out, flush=True)
         log(
             f"Detected {len(swing_events)} significant swings at threshold "
             f"{swing_threshold_score:.2f} (scope={swing_scope}, cause_mode={cause_mode})."
