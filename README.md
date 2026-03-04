@@ -24,6 +24,12 @@ Two rapid games that show tactical conversion and comeback play: a 15-move check
 ## How to View the Games
 Open either PGN from `games/2026-02-27-fast-checkmate.pgn` or `games/2026-03-03-comeback-vs-gaju33333.pgn` in Chess.com or Lichess analysis boards, or import into any PGN viewer.
 
+## Engine Analysis
+- Generate analysis with `python3 analyze_pgn.py <pgn-path>`.
+- Markdown is written automatically to `analysis/<game-name>.md`.
+- Output is POV-oriented to `SoloPistol` by default; override with `--pov-player "<name>"`.
+- Use `--output-md "<path>"` for a custom output file, or `--output-md -` to print to stdout.
+
 Visual highlight:
 
 ![Lichess comeback highlight](media/2026-03-03-lichess-comeback.gif)
