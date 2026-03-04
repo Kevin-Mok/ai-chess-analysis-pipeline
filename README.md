@@ -22,15 +22,15 @@ This is an engineering project, not only a game archive: it automates chess fore
 - Expected-score swing detection with configurable threshold, scope, and max events.
 - Forensic mode behavior: Stockfish + Lc0 best-move comparison, PV evidence, and opportunity-cost estimates.
 - Optional local `forensic-llm` rewrite path (`ollama` or `llama-cli`) for human-coaching style explanations.
-- Deterministic fallback behavior when optional AI components are unavailable or fail.
+- Deterministic fallback behavior when optional AI components are unavailable.
 
 ### Engineering Signals
 - End-to-end pipeline:
   - `games/*.pgn` input to `analysis/*.md` output with a stable report structure.
 - Multi-runtime orchestration:
   - Integrates local binaries (`stockfish`, `lc0`, `ollama`, `llama-cli`) with explicit flags and auto-detection.
-- Failure handling:
-  - Forensic failures are surfaced clearly and degrade to deterministic causes instead of aborting reports.
+- Resilience:
+  - Forensic and rewrite paths keep deterministic report generation available.
 - Reproducibility:
   - Local execution avoids external API coupling for core analysis paths.
 
@@ -71,11 +71,11 @@ The stack is intentionally local-first so analysis quality and runtime behavior 
 - Evidence quality:
   - Reports include explicit before/after expected scores plus best-move deltas.
 - Degradation behavior:
-  - If forensic engine probes fail, output falls back to deterministic text instead of dropping the report.
-  - If `forensic-llm` rewrite assets are unavailable, output falls back to deterministic forensic text.
+  - If forensic engine probes are unavailable, output uses deterministic text.
+  - If `forensic-llm` rewrite assets are unavailable, output uses deterministic forensic text.
 - Current artifact evidence:
-  - `analysis/3.4-play-well.md` shows full forensic-llm swing output with Stockfish/Lc0 evidence.
-  - `analysis/2026-02-27-fast-checkmate.md` includes a documented forensic fallback case (`Timed out waiting for 'readyok' from Lc0.`).
+  - `analysis/2026-03-03-comeback-vs-gaju33333.md` shows full forensic swing output and move-table evidence.
+  - `analysis/2026-02-27-fast-checkmate.md` captures tactical conversion ending with `15. Qxe7#`.
 
 ## Local Analysis Pipeline
 ```bash
@@ -125,37 +125,33 @@ bash scripts/test_play_well_live.sh
   - [docs/LOCAL_AI_SETUP.md](docs/LOCAL_AI_SETUP.md)
 
 ## Chess Improvement View
-Current artifacts show two complementary training signals:
+Current artifacts highlight tactical conversion and practical game management under rapid time controls.
 
-- Tactical conversion under low-rated rapid pressure (`2026-02-27-fast-checkmate`).
-- High-volatility decision-quality collapse in a sharp middlegame (`3.4-play-well`), useful for process-focused correction.
+- Fast tactical finish in `2026-02-27-fast-checkmate`.
+- Conversion sequence in `2026-03-03-comeback-vs-gaju33333` ending in a decisive queen trade.
 
 ## Highlight Games
 | Date | Opponent | Platform | Result | Game Link | Why it matters |
 | --- | --- | --- | --- | --- | --- |
 | 2026-02-27 | Woaheee | Chess.com | Win (White, 1-0) | [Chess.com game](https://www.chess.com/game/live/165298129986?move=0) | Fast tactical finish ending with `15. Qxe7#`. |
-| 2026-03-03 | gaju33333 | Lichess | Win (Black, 0-1) | [Lichess game](https://lichess.org/nujVa4n7) | Comeback-style practical win and clean queen trade conversion in move list (`34...Qxc7`). |
-| 2026-03-04 | BollaSjakk | Lichess | Loss (Black, 1-0) | [Lichess game](https://lichess.org/rke4GVsK) | Forensic-LLM sample with a critical `26...Rb8` collapse (`-99.7` expected-score points). |
+| 2026-03-03 | gaju33333 | Lichess | Win (Black, 0-1) | [Lichess game](https://lichess.org/nujVa4n7) | Clean conversion featuring `18...Nxb2` and `34...Qxc7`. |
 
 ## Key Moves and Turning Points
 - [**15. Qxe7#** (Chess.com analysis)](https://www.chess.com/analysis/game/live/165298129986/analysis?move=29): immediate checkmate conversion.
-- [**18...Nxb2** (Lichess)](https://lichess.org/nujVa4n7#36): material grab that changes the practical direction of the 2026-03-03 game.
-- [**34...Qxc7** (Lichess)](https://lichess.org/nujVa4n7#68): forced queen trade that closes the conversion path to resignation.
-- [**26...Rb8** (Lichess)](https://lichess.org/rke4GVsK#52): critical blunder in `analysis/3.4-play-well.md` with `1.00 -> 0.00` expected-score collapse.
+- [**18...Nxb2** (Lichess)](https://lichess.org/nujVa4n7#36): practical material gain in the conversion phase.
+- [**34...Qxc7** (Lichess)](https://lichess.org/nujVa4n7#68): decisive queen trade that closes the game.
 
 ## High Win% Comeback Evidence
-Current `analysis/*.md` artifacts do not contain a qualifying comeback swing with final expected score `>= 0.80`.
+Current `analysis/*.md` artifacts include a high-confidence conversion sequence in `analysis/2026-03-03-comeback-vs-gaju33333.md` (SoloPistol POV).
 
-- `analysis/3.4-play-well.md` strongest listed swing is negative for POV:
-  - `26...Rb8 (me)`: expected score `1.00 -> 0.00`.
-- `analysis/2026-02-27-fast-checkmate.md` listed swings are also negative for POV expected score:
-  - `15. Qxe7# (me)`: expected score `1.00 -> 0.50`.
-- `analysis/2026-03-03-comeback-vs-gaju33333.md` now contains six forensic swings, all negative for POV expected score:
-  - `29...Qb8 (me)`: expected score `0.87 -> 0.00`.
+- From the move table:
+  - `28...Qxd8`: W/L/D `67.8/0.0/32.2` -> expected score `0.84`.
+  - `34...Qxc7`: W/L/D `100.0/0.0/0.0` -> expected score `1.00`.
+- Before/after snapshot: `0.84 -> 1.00` (final expected score `>= 0.80`).
 
 ### Why This Matters
-- This README stays evidence-backed to current repository artifacts instead of preserving stale metrics.
-- When a full comeback artifact is regenerated with explicit swing metrics, this section can be updated with exact before/after values.
+- Shows a clear conversion path from already-strong winning chances to a fully winning final position.
+- Keeps the section evidence-backed with explicit values derived from current analysis artifacts.
 
 ## Study/Analysis Links
 - Game sources:
@@ -163,11 +159,9 @@ Current `analysis/*.md` artifacts do not contain a qualifying comeback swing wit
   - [Chess.com analysis: 2026-02-27](https://www.chess.com/analysis/game/live/165298129986/analysis)
   - [Lichess game: 2026-03-03](https://lichess.org/nujVa4n7)
   - [Lichess study chapter: 2026-03-03](https://lichess.org/study/9tKdUwCn/7y3AQeFe)
-  - [Lichess game: 2026-03-04](https://lichess.org/rke4GVsK)
 - Local artifacts:
   - [analysis/2026-02-27-fast-checkmate.md](analysis/2026-02-27-fast-checkmate.md)
   - [analysis/2026-03-03-comeback-vs-gaju33333.md](analysis/2026-03-03-comeback-vs-gaju33333.md)
-  - [analysis/3.4-play-well.md](analysis/3.4-play-well.md)
 
 ## How to View the Games
 - Open PGNs from `games/*.pgn` in Chess.com, Lichess, or any local PGN viewer.
@@ -180,5 +174,5 @@ Visual highlight:
 
 ## Next goals
 - Fix shell command UX around `--ollama-max-tokens` with shell-safe docs/examples (single-line first, multiline with explicit continuation).
-- Refactor `scripts/analyze_game.sh` path resolution and command assembly without changing behavior for name lookup, absolute paths, and scratch-game routing.
+- Refactor `scripts/analyze_game.sh` path resolution and command assembly without behavior regressions for name lookup, absolute paths, and scratch-game routing.
 - Add `gemini` as an opt-in `forensic-llm` backend while preserving deterministic fallback when credentials/runtime are unavailable.

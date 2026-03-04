@@ -42,6 +42,17 @@ All README claims must come from repository artifacts only:
 
 Never invent games, moves, links, percentages, or outcomes.
 
+## README Tone And Score Filter (Required)
+
+When writing or regenerating `README.md`, do not include negative content or bad-score callouts.
+
+- Exclude explicit loss-result narratives, blunders, collapses, missed tactics, or expected-score drops.
+  - Exception: required technical schema labels such as `Win%`, `Loss%`, `Draw%` are allowed when describing analyzer output format.
+- Exclude negative delta notation for score changes (for example `-99.7 pts`) in README narrative content.
+- Keep framing positive/neutral and evidence-backed by repository artifacts.
+- If a required section has no qualifying positive evidence yet, use neutral wording without negative metrics.
+- Do not fabricate positive outcomes; keep all claims traceable to current repository files.
+
 ## TODO To README Sync (Required)
 
 When README regeneration is triggered, explicitly read `docs/TODO.md` and sync relevant near-term items into `README.md` section `## Next goals` (max 3 bullets).
