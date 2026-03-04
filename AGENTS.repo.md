@@ -12,6 +12,10 @@ Update `README.md` in the same change whenever any of the following happens:
 2. Analysis script behavior, defaults, CLI flags, or output format changes.
 3. Local setup/runtime requirements for analysis change.
 
+Scratch-game exception:
+
+- If a change is exclusively for scratch artifacts under `games/scratch-games/**` and/or `analysis/scratch-games/**`, `README.md` does not need to be updated.
+
 Treat these as trigger paths:
 
 - `games/**/*.pgn`
@@ -20,7 +24,7 @@ Treat these as trigger paths:
 - `scripts/**/*.sh`
 - `docs/LOCAL_AI_SETUP.md`
 
-If a trigger path changes, README updates are mandatory in that same change set.
+If a trigger path changes, README updates are mandatory in that same change set, except for the scratch-game exception above.
 
 ## README Source Of Truth
 
@@ -97,6 +101,12 @@ README must strongly emphasize local AI/engine tooling and each tool's role.
 
 If CLI flags change in `analyze_pgn.py`, update README command examples immediately.
 
+## Scratch Game Routing (Required)
+
+When analyzing PGNs under `games/scratch-games/`, output markdown must be written under `analysis/scratch-games/` (same filename stem, `.md` extension).
+
+- For `scripts/analyze_game.sh`, preserve relative subpath under `games/` when mapping to `analysis/`.
+
 ## Chess View Requirements
 
 `## Chess Improvement View` + following sections must include:
@@ -113,7 +123,7 @@ If CLI flags change in `analyze_pgn.py`, update README command examples immediat
 
 Before marking a task done, if trigger paths changed, verify:
 
-1. `README.md` is updated in the same change.
+1. `README.md` is updated in the same change (except scratch-only changes under `games/scratch-games/**` or `analysis/scratch-games/**`).
 2. README command examples match current script interfaces.
 3. Numeric claims in README match current `analysis/*.md`.
 4. All required sections in the output contract are present.

@@ -13,6 +13,7 @@ Usage:
 
 Examples:
   scripts/analyze_game.sh 2026-03-03-comeback-vs-gaju33333
+  scripts/analyze_game.sh scratch-games/my-quick-test
   scripts/analyze_game.sh games/2026-03-03-comeback-vs-gaju33333.pgn
   scripts/analyze_game.sh /abs/path/to/game.pgn --cause-mode heuristic
 EOF
@@ -59,7 +60,7 @@ resolve_pgn_path() {
     while IFS= read -r path; do
         matches+=("$path")
     done < <(
-        find "${GAMES_DIR}" -maxdepth 1 -type f -name "*.pgn" \
+        find "${GAMES_DIR}" -type f -name "*.pgn" \
             | awk -v q="$t" '
                 {
                     file=$0
@@ -89,9 +90,15 @@ resolve_pgn_path() {
 }
 
 pgn_path="$(resolve_pgn_path "$target")"
-output_md="${ANALYSIS_DIR}/$(basename "${pgn_path}" .pgn).md"
 
-mkdir -p "${ANALYSIS_DIR}"
+if [[ "${pgn_path}" == "${GAMES_DIR}/"* ]]; then
+    relative_pgn="${pgn_path#${GAMES_DIR}/}"
+    output_md="${ANALYSIS_DIR}/${relative_pgn%.pgn}.md"
+else
+    output_md="${ANALYSIS_DIR}/$(basename "${pgn_path}" .pgn).md"
+fi
+
+mkdir -p "$(dirname "${output_md}")"
 
 cmd=(
     python3
