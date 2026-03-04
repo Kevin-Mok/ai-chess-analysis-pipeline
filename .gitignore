@@ -3,3 +3,7 @@
 __pycache__/
 games/scratch-games/
 analysis/scratch-games/
+analysis/live/*.progress.md
+analysis/live/*.lessons.md
+analysis/live/*.stockfish.md
+analysis/live/*.thinking.md
