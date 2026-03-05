@@ -19,7 +19,7 @@ I built this to replace closed, subscription-heavy review workflows with a local
 This is an engineering project, not only a game archive: it automates chess forensics from PGN input to evidence-backed outputs.
 
 - PGN parsing + POV-oriented move-by-move engine table (`Win%`, `Loss%`, `Draw%`, eval) via `analyze_pgn.py`.
-- Expected-score swing detection with configurable threshold, scope, and max events.
+- Critical expected-score swing detection (Critical-only) with configurable threshold, scope, and max events.
 - Forensic mode behavior: Stockfish + Lc0 best-move comparison, PV evidence, and opportunity-cost estimates.
 - Optional local `forensic-llm` rewrite path (`ollama` or `llama-cli`) for human-coaching style explanations.
 - Deterministic fallback behavior when optional AI components are unavailable.
@@ -107,7 +107,7 @@ bash scripts/test_play_well_live.sh
 - Core runtime:
   - `--pov-player`, `--output-md`, `--max-seconds`, `--threads`, `--hash-mb`
 - Swing extraction:
-  - `--swing-threshold-score`, `--swing-max-events`, `--swing-scope`
+  - `--swing-threshold-score`, `--swing-max-events`, `--swing-scope` (reports only `Critical` swings, with an effective minimum threshold of `0.50`)
 - Forensic controls:
   - `--cause-mode heuristic|forensic|forensic-llm`, `--forensic-time-ms`, `--forensic-multipv`, `--forensic-max-pv-plies`
   - `--lc0-path`, `--lc0-weights`

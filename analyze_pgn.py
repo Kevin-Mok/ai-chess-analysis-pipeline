@@ -33,6 +33,7 @@ DEFAULT_ANALYSIS_DIR = "analysis"
 DEFAULT_SWING_THRESHOLD_SCORE = 0.20
 DEFAULT_SWING_MAX_EVENTS = 8
 DEFAULT_SWING_SCOPE = "pov"
+CRITICAL_SWING_THRESHOLD_SCORE = 0.50
 DEFAULT_CAUSE_MODE = "forensic"
 DEFAULT_FORENSIC_TIME_MS = 700
 DEFAULT_FORENSIC_MULTIPV = 3
@@ -477,11 +478,15 @@ def should_track_swing(swing_scope, mover_is_pov):
 
 
 def swing_severity(abs_delta):
-    if abs_delta >= 0.50:
+    if abs_delta >= CRITICAL_SWING_THRESHOLD_SCORE:
         return "Critical"
     if abs_delta >= 0.20:
         return "Major"
     return "Notable"
+
+
+def is_critical_swing(abs_delta):
+    return abs_delta >= CRITICAL_SWING_THRESHOLD_SCORE
 
 
 def select_swing_events(swing_events, swing_max_events):
@@ -1603,7 +1608,8 @@ def render_significant_swings(
     print("", file=out, flush=True)
     print(
         f"- Config: threshold={swing_threshold_score * 100:.1f} pts, "
-        f"scope={swing_scope}, max-events={swing_max_events}, cause-mode={cause_mode}",
+        f"scope={swing_scope}, max-events={swing_max_events}, cause-mode={cause_mode}, "
+        "severity=Critical only",
         file=out,
         flush=True,
     )
@@ -1613,7 +1619,7 @@ def render_significant_swings(
         return
 
     if not swing_events:
-        print("- No swings met the configured threshold.", file=out, flush=True)
+        print("- No critical swings met the configured threshold.", file=out, flush=True)
         return
 
     selected_events = select_swing_events(swing_events, swing_max_events)
@@ -1952,6 +1958,7 @@ def main(
                     abs_delta = abs(delta)
                     if (
                         abs_delta >= swing_threshold_score
+                        and is_critical_swing(abs_delta)
                         and should_track_swing(swing_scope, mover_is_pov)
                     ):
                         swing_events.append(
@@ -2176,7 +2183,7 @@ def main(
             print(row, file=out, flush=True)
         print("```", file=out, flush=True)
         log(
-            f"Detected {len(swing_events)} significant swings at threshold "
+            f"Detected {len(swing_events)} critical swings at threshold "
             f"{swing_threshold_score:.2f} (scope={swing_scope}, cause_mode={cause_mode})."
         )
         if out is not sys.stdout:
@@ -2248,7 +2255,8 @@ if __name__ == "__main__":
         type=float,
         default=DEFAULT_SWING_THRESHOLD_SCORE,
         help=(
-            "Significant swing threshold in expected-score units (0.20 = 20 pts); "
+            "Critical swing threshold in expected-score units (0.20 = 20 pts); "
+            f"effective minimum is {CRITICAL_SWING_THRESHOLD_SCORE:.2f}; "
             f"default: {DEFAULT_SWING_THRESHOLD_SCORE}"
         ),
     )
