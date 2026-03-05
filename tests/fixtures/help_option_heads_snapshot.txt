@@ -1,0 +1,30 @@
+--threads THREADS
+--hash-mb HASH_MB
+--max-seconds MAX_SECONDS
+--min-ms MIN_MS
+--max-ms MAX_MS
+--pov-player POV_PLAYER
+--swing-threshold-score SWING_THRESHOLD_SCORE
+--swing-max-events SWING_MAX_EVENTS
+--swing-scope {both,pov,opponent}
+--cause-mode {heuristic,forensic,forensic-llm}
+--llm-backend {auto,ollama,llama-cli}
+--lc0-path LC0_PATH
+--lc0-weights LC0_WEIGHTS
+--forensic-time-ms FORENSIC_TIME_MS
+--forensic-multipv FORENSIC_MULTIPV
+--forensic-max-pv-plies FORENSIC_MAX_PV_PLIES
+--ollama-host OLLAMA_HOST
+--ollama-model OLLAMA_MODEL
+--ollama-timeout-ms OLLAMA_TIMEOUT_MS
+--ollama-max-tokens OLLAMA_MAX_TOKENS
+--ollama-temperature OLLAMA_TEMPERATURE
+--llm-log-raw
+--llm-raw-max-chars LLM_RAW_MAX_CHARS
+--llm-request-thinking
+--llama-cli-path LLAMA_CLI_PATH
+--llama-model LLAMA_MODEL
+--llama-timeout-ms LLAMA_TIMEOUT_MS
+--llama-max-tokens LLAMA_MAX_TOKENS
+--llama-temperature LLAMA_TEMPERATURE
+--output-md OUTPUT_MD
